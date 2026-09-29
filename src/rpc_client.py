@@ -56,7 +56,7 @@ class RPCClient:
 
     def create_person(self, ip: str, platform: str, user_agent: str) -> int:
         """Call remote create_person."""
-        return self._call(1, [ip, platform, user_agent])
+        return self._call(1, [ip, user_agent, user_agent])
 
     def delete_person(self, identifier: int) -> bool:
         """Call remote delete_person."""

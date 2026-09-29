@@ -1,6 +1,3 @@
-"""Model-Based Testing for TCP RPC Server and Client."""
-
-import sys
 import threading
 import time
 from hypothesis import strategies as st
@@ -10,8 +7,6 @@ from hypothesis.stateful import (
     rule,
     run_state_machine_as_test,
 )
-
-sys.path.insert(0, "src")
 
 import data_layer
 from rpc_client import RPCClient

@@ -85,17 +85,13 @@ def run_server() -> None:
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_sock.bind((HOST, PORT))
     server_sock.listen(1)
-    print(f"RPC Server listening on {HOST}:{PORT}")
-
-    try:
-        while True:
-            conn, addr = server_sock.accept()
-            with conn:
-                process_connection(conn)
-    except KeyboardInterrupt:
-        print("Server stopped.")
-    finally:
-        server_sock.close()
+    print(f"RPC Server listening on {HOST} port {PORT}")
+    while True:
+        conn, _ = server_sock.accept()
+        try:
+            process_connection(conn)
+        finally:
+            conn.close()
 
 
 if __name__ == "__main__":

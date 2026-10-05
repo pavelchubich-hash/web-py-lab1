@@ -1,5 +1,3 @@
-"""Model-Based Testing for TCP RPC Server and Client with an Independent Reference Model."""
-
 import threading
 import time
 from hypothesis import strategies as st
@@ -19,7 +17,7 @@ from rpc_server import HOST, PORT, run_server
 class ReferenceModel:
     """Независимая эталонная модель (Оракул).
 
-    Хранит ожидаемое состояние системы и воспроизводит бизнес-логику data_layer.
+    Хранит состояние и воспроизводит логику data_layer.
     """
 
     def __init__(self) -> None:
@@ -27,7 +25,9 @@ class ReferenceModel:
         self.commands: list[tuple] = []
         self.results: list[tuple] = []
 
-    def create_person(self, ip: str, platform: str, user_agent: str) -> int:
+    def create_person(
+        self, ip: str, platform: str, user_agent: str
+    ) -> int:
         pid = len(self.persons)
         record = (pid, 0, ip, platform, user_agent)
         self.persons.append(record)
@@ -41,7 +41,12 @@ class ReferenceModel:
         return False
 
     def create_command(
-        self, data: str, person: int, tags: str, status: str, triggered: int
+        self,
+        data: str,
+        person: int,
+        tags: str,
+        status: str,
+        triggered: int,
     ) -> int:
         cid = len(self.commands)
         record = (cid, 0, data, person, tags, status, triggered)
@@ -80,7 +85,7 @@ class ReferenceModel:
 
 
 def records_match(actual_records: list, expected_records: list) -> bool:
-    """Сравнивает записи сервера (списки JSON) с эталонной моделью (кортежи)."""
+    """Сравнивает записи сервера с моделью."""
     if len(actual_records) != len(expected_records):
         return False
 
@@ -88,11 +93,11 @@ def records_match(actual_records: list, expected_records: list) -> bool:
         act_t = tuple(act)
         exp_t = tuple(exp)
 
-        if act_t[0] != exp_t[0]:  # Сравнение ID
+        if act_t[0] != exp_t[0]:
             return False
-        if not isinstance(act_t[1], int):  # Проверка формата timestamp
+        if not isinstance(act_t[1], int):
             return False
-        if act_t[2:] != exp_t[2:]:  # Сравнение всех остальных полей
+        if act_t[2:] != exp_t[2:]:
             return False
     return True
 
@@ -106,23 +111,18 @@ class RPCStateMachine(RuleBasedStateMachine):
 
     def __init__(self) -> None:
         super().__init__()
-        # 1. Сброс состояния сервера перед каждым прогоном
         data_layer.persons.clear()
         data_layer.commands.clear()
         data_layer.results.clear()
 
-        # 2. Подключение клиента
         self.client = RPCClient(HOST, PORT)
         self.client.connect()
 
-        # 3. Инициализация независимой эталонной модели
         self.model = ReferenceModel()
 
     def teardown(self) -> None:
         """Закрытие соединения с сервером."""
         self.client.close()
-
-    # --- ПРАВИЛА (RULES) ---
 
     @rule(
         target=persons,
@@ -193,37 +193,45 @@ class RPCStateMachine(RuleBasedStateMachine):
 
         assert res_system == res_model
 
-    # --- ИНВАРИАНТЫ ---
-
     @invariant()
     def check_state_matches_model(self):
         """Проверка полного совпадения состояния сервера и оракула."""
-        # 1. Проверка сущностей Person
-        server_persons = sorted(self.client.get_persons(), key=lambda x: x[0])
+        server_persons = sorted(
+            self.client.get_persons(), key=lambda x: x[0]
+        )
         model_persons = sorted(self.model.persons, key=lambda x: x[0])
         assert records_match(server_persons, model_persons), (
-            f"Mismatch in persons!\nServer: {server_persons}\nModel:  {model_persons}"
+            f"Mismatch in persons!\n"
+            f"Server: {server_persons}\n"
+            f"Model:  {model_persons}"
         )
 
-        # 2. Проверка сущностей Command
-        server_commands = sorted(self.client.get_commands(), key=lambda x: x[0])
+        server_commands = sorted(
+            self.client.get_commands(), key=lambda x: x[0]
+        )
         model_commands = sorted(self.model.commands, key=lambda x: x[0])
         assert records_match(server_commands, model_commands), (
-            f"Mismatch in commands!\nServer: {server_commands}\nModel:  {model_commands}"
+            f"Mismatch in commands!\n"
+            f"Server: {server_commands}\n"
+            f"Model:  {model_commands}"
         )
 
-        # 3. Проверка сущностей Result
-        server_results = sorted(self.client.get_results(), key=lambda x: x[0])
+        server_results = sorted(
+            self.client.get_results(), key=lambda x: x[0]
+        )
         model_results = sorted(self.model.results, key=lambda x: x[0])
         assert records_match(server_results, model_results), (
-            f"Mismatch in results!\nServer: {server_results}\nModel:  {model_results}"
+            f"Mismatch in results!\n"
+            f"Server: {server_results}\n"
+            f"Model:  {model_results}"
         )
 
-        # 4. Проверка работы выборки select_data()
         server_select = [tuple(x) for x in self.client.select_data()]
         model_select = [tuple(x) for x in self.model.select_data()]
         assert server_select == model_select, (
-            f"Mismatch in select_data!\nServer: {server_select}\nModel:  {model_select}"
+            f"Mismatch in select_data!\n"
+            f"Server: {server_select}\n"
+            f"Model:  {model_select}"
         )
 
 
